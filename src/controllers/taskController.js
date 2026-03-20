@@ -1,25 +1,28 @@
-import Task from  '../models/Task.js'
-import User from '../models/User.js'
+import Task from '../models/Task.js'
 
 export const getTasks = async (req, res) => {
-  const tasks = await Task.find({createdBy: req.user.id}).populate('createdBy', 'name email').sort({ createdAt: -1 })
-  res.json({success: true, count: tasks.length, data:tasks})
+  const tasks = await Task.find({ createdBy: req.user.id })
+    .populate('createdBy', 'name email')
+    .sort({ createdAt: -1 })
+  res.json({ success: true, count: tasks.length, data: tasks })
 }
 
 export const getTask = async (req, res) => {
-  const task = await Task.findById(req.params.id).populate('createdBy', 'name email')
+  const task = await Task.findOne({
+    _id: req.params.id,
+    createdBy: req.user.id, 
+  }).populate('createdBy', 'name email')
 
-  if(!task){
+  if (!task) {
     const error = new Error('Task not found')
     error.statusCode = 404
     throw error
   }
-  res.json({success: true, data: task})
+  res.json({ success: true, data: task })
 }
 
-
 export const createTask = async (req, res) => {
-  const {title, description, status, priority, dueDate} = req.body
+  const { title, description, status, priority, dueDate } = req.body
 
   const task = await Task.create({
     title,
@@ -27,41 +30,36 @@ export const createTask = async (req, res) => {
     status,
     priority,
     dueDate,
-    createdBy: req.user.id
+    createdBy: req.user.id,
   })
-  res.status(201).json({success: true, data: task})
+  res.status(201).json({ success: true, data: task })
 }
 
-
 export const updateTask = async (req, res) => {
-  const task = await Task.findByIdAndUpdate(
-    req.params.id,
+  const task = await Task.findOneAndUpdate(
+    { _id: req.params.id, createdBy: req.user.id }, 
     req.body,
-    {
-      new:true,
-      runValidators: true
-    }
+    { new: true, runValidators: true }
   )
 
-  if(!task){
+  if (!task) {
     const error = new Error('Task not found')
     error.statusCode = 404
     throw error
   }
-    
-  res.json({success: true, data: task})  
-  
+  res.json({ success: true, data: task })
 }
 
 export const deleteTask = async (req, res) => {
-  const task = await Task.findByIdAndDelete(req.params.id)
+  const task = await Task.findOneAndDelete({
+    _id: req.params.id,
+    createdBy: req.user.id, 
+  })
 
-  if(!task){
+  if (!task) {
     const error = new Error('Task not found')
     error.statusCode = 404
     throw error
   }
-
-  res.json({success: true, message: 'Task deleted'})
-  
+  res.json({ success: true, message: 'Task deleted' })
 }

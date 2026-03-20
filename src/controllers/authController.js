@@ -112,6 +112,7 @@ export const refreshToken = async (req, res) => {
 export const logout = (req, res) => {
   res.cookie('refreshToken', '', {
     httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
     expires: new Date(0), 
   })
 
@@ -120,6 +121,12 @@ export const logout = (req, res) => {
 
 export const getMe = async (req, res) => {
   const user = await User.findById(req.user.id)
+
+  if (!user) {
+    const error = new Error('User not found')
+    error.statusCode = 404
+    throw error
+  }
 
   res.json({
     success: true,
