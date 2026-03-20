@@ -1,0 +1,67 @@
+import Task from  '../models/Task.js'
+import User from '../models/User.js'
+
+export const getTasks = async (req, res) => {
+  const tasks = await Task.find({}).populate('createdBy', 'name email')
+  res.json({success: true, count: tasks.length, data:tasks})
+}
+
+export const getTask = async (req, res) => {
+  const task = await Task.findById(req.params.id).populate('createdBy', 'name email')
+
+  if(!task){
+    const error = new Error('Task not found')
+    error.statusCode = 404
+    throw error
+  }
+  res.json({success: true, data: task})
+}
+
+
+export const createTask = async (req, res) => {
+  const {title, description, status, priority, dueDate} = req.body
+
+  const task = await Task.create({
+    title,
+    description,
+    status,
+    priority,
+    dueDate,
+    createdBy: '507f1f77bcf86cd799439011'
+  })
+  res.status(201).json({success: true, data: task})
+}
+
+
+export const updateTask = async (req, res) => {
+  const task = await Task.findByIdAndUpdate(
+    req.params.id,
+    req.body,
+    {
+      new:true,
+      runValidators: true
+    }
+  )
+
+  if(!task){
+    const error = new Error('Task not found')
+    error.statusCode = 404
+    throw error
+  }
+    
+  res.json({success: true, data: task})  
+  
+}
+
+export const deleteTask = async (req, res) => {
+  const task = await Task.findByIdAndDelete(req.params.id)
+
+  if(!task){
+    const error = new Error('Task not found')
+    error.statusCode = 404
+    throw error
+  }
+
+  res.json({success: true, message: 'Task deleted'})
+  
+}
