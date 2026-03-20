@@ -2,7 +2,7 @@ import Task from  '../models/Task.js'
 import User from '../models/User.js'
 
 export const getTasks = async (req, res) => {
-  const tasks = await Task.find({}).populate('createdBy', 'name email')
+  const tasks = await Task.find({createdBy: req.user.id}).populate('createdBy', 'name email').sort({ createdAt: -1 })
   res.json({success: true, count: tasks.length, data:tasks})
 }
 
@@ -27,7 +27,7 @@ export const createTask = async (req, res) => {
     status,
     priority,
     dueDate,
-    createdBy: '507f1f77bcf86cd799439011'
+    createdBy: req.user.id
   })
   res.status(201).json({success: true, data: task})
 }
