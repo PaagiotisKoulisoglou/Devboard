@@ -1,80 +1,67 @@
-import { createContext, useState, useEffect, useCallback } from 'react'
+import { createContext, useContext, useEffect } from 'react'
+import { useDispatch, useSelector } from 'react-redux'
 import api from '../api/axios'
+import {
+  setCredentials,
+  clearCredentials,
+  setLoading,
+  selectUser,
+  selectIsAuthenticated,
+  selectAuthLoading,
+} from '../store/slices/authSlice'
 
 export const AuthContext = createContext(null)
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser]       = useState(null)
-  const [loading, setLoading] = useState(true) 
+  const dispatch         = useDispatch()
+  const user             = useSelector(selectUser)
+  const isAuthenticated  = useSelector(selectIsAuthenticated)
+  const loading          = useSelector(selectAuthLoading)
 
-  const setToken = useCallback((token) => {
-    if (token) {
-      api.defaults.headers.common['Authorization'] = `Bearer ${token}`
-    } else {
-      delete api.defaults.headers.common['Authorization']
-    }
-  }, [])
-
-  const login = useCallback(async (email, password) => {
+  const login = async (email, password) => {
     const { data } = await api.post('/auth/login', { email, password })
-    setToken(data.accessToken)
-    setUser(data.user)
+    dispatch(setCredentials({ user: data.user, accessToken: data.accessToken }))
     return data
-  }, [setToken])
+  }
 
-  const register = useCallback(async (name, email, password) => {
+  const register = async (name, email, password) => {
     const { data } = await api.post('/auth/register', { name, email, password })
-    setToken(data.accessToken)
-    setUser(data.user)
+    dispatch(setCredentials({ user: data.user, accessToken: data.accessToken }))
     return data
-  }, [setToken])
+  }
 
-  const logout = useCallback(async () => {
-    try {
-      await api.post('/auth/logout') 
-    } catch {
-    }
-    setToken(null)
-    setUser(null)
-  }, [setToken])
+  const logout = async () => {
+    try { await api.post('/auth/logout') } catch { /* ignore */ }
+    dispatch(clearCredentials())
+  }
 
   useEffect(() => {
     const bootstrap = async () => {
       try {
         const { data } = await api.post('/auth/refresh')
-        setToken(data.accessToken)
-        setUser(data.user)
+        dispatch(setCredentials({ user: data.user, accessToken: data.accessToken }))
       } catch {
-        setUser(null)
-      } finally {
-        setLoading(false)
+        dispatch(clearCredentials())
       }
     }
-
     bootstrap()
-  }, [setToken])
+  }, [dispatch])
 
   useEffect(() => {
-    const handleForcedLogout = () => {
-      setToken(null)
-      setUser(null)
-    }
-    window.addEventListener('auth:logout', handleForcedLogout)
-    return () => window.removeEventListener('auth:logout', handleForcedLogout)
-  }, [setToken])
-
-  const value = {
-    user,
-    loading,
-    isAuthenticated: !!user,
-    login,
-    register,
-    logout,
-  }
+    const handle = () => dispatch(clearCredentials())
+    window.addEventListener('auth:logout', handle)
+    return () => window.removeEventListener('auth:logout', handle)
+  }, [dispatch])
 
   return (
-    <AuthContext.Provider value={value}>
+    <AuthContext.Provider value={{ user, isAuthenticated, loading, login, register, logout }}>
       {children}
     </AuthContext.Provider>
   )
+}
+
+export const useAuth = () => {
+  const ctx = useContext(AuthContext)
+  if (!ctx) throw new Error('useAuth must be inside AuthProvider')
+  return ctx
 }
